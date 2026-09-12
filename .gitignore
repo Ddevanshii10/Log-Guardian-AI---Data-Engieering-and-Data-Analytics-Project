@@ -1,0 +1,33 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.pyc
+
+.venv/
+venv/
+env/
+
+*.pem
+*.key
+
+
+# Local Superset configuration
+superset_config.py
+
+# Local/archive copies
+*_archive/
+
+# Large local archives
+*.zip
+*.tar.gz
+
+# Kafka credentials / keystores
+*.jks
+
+# Raw log data
+*.log
+
+# Design document may contain historical credentials
+Log Guardian Development/docs/Project Design Document.docx

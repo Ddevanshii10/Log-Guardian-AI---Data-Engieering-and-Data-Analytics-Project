@@ -1,0 +1,2 @@
+Log[[:space:]]Guardian[[:space:]]Development/docs/archive/HDFS_v1.zip filter=lfs diff=lfs merge=lfs -text
+Log[[:space:]]Guardian[[:space:]]Development/docs/archive/Spark.tar.gz filter=lfs diff=lfs merge=lfs -text

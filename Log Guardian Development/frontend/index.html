@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Guardian — SRE Observability & AI Intelligence Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Connection Error Banner -->
+  <div id="error-banner" class="error-banner hidden">
+    <span class="error-banner-icon">⚠️</span>
+    <span id="error-banner-text">Data connection lost — showing last known snapshot.</span>
+    <button class="error-banner-close" onclick="document.getElementById('error-banner').classList.add('hidden')">✕</button>
+  </div>
+
+  <!-- Top Masthead matching Superset & Mission Control -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <div class="brand-left">
+        <span class="logo-shield">🛡️</span>
+        <h1 class="brand-name">Log Guardian</h1>
+      </div>
+      <div class="masthead-right">
+        <div class="status-chip live"><span class="pulse-dot"></span> PIPELINE LIVE (KAFKA → DELTA)</div>
+        <div class="status-chip ai"><span class="ai-icon">✨</span> GEMINI 2.5 FLASH GROUNDED</div>
+        <div class="refresh-toolbar">
+          <span class="status-chip" id="last-refresh-chip" title="Last data refresh time">🕐 --:--:--</span>
+          <button class="btn-refresh" id="btn-manual-refresh" title="Refresh data now">↻ Refresh</button>
+          <label class="auto-refresh-toggle" title="Toggle auto-refresh every 60s">
+            <input type="checkbox" id="toggle-auto-refresh" checked>
+            <span class="toggle-label">Auto <span id="refresh-countdown">60s</span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="masthead-subtitle">
+      280,000 OpenStack service log lines streamed through Kafka into a Bronze → Silver → Gold medallion architecture on Databricks, with anomaly detection and service health models on top. Latency metrics cover HTTP requests only; services that log no requests show <em>not measured</em> rather than zero.
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-bar">
+    <button class="nav-item active" data-tab="tab-dashboard">
+      <span class="nav-icon">📊</span> Analytics Dashboard
+    </button>
+    <button class="nav-item" data-tab="tab-ml">
+      <span class="nav-icon">🧠</span> ML Anomaly & Model Cards
+    </button>
+    <button class="nav-item" data-tab="tab-ai-explorer">
+      <span class="nav-icon">🤖</span> AI "Why?" Explorer
+    </button>
+  </nav>
+
+  <main class="content-wrapper">
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: EXACT MATCH ANALYTICS DASHBOARD                                -->
+    <!-- ===================================================================== -->
+    <section id="tab-dashboard" class="tab-page active">
+      
+      <!-- Top 4 Superset KPI Cards -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-header">LG — KPI Log lines</div>
+          <div class="kpi-number mono" id="kpi-log-lines">281,897</div>
+          <div class="kpi-footer">Log Lines Processed</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">LG — KPI HTTP requests</div>
+          <div class="kpi-number mono" id="kpi-http-requests">143,231</div>
+          <div class="kpi-footer">HTTP Requests Measured</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">LG — KPI Warning rate</div>
+          <div class="kpi-number mono" id="kpi-warning-rate">1.60%</div>
+          <div class="kpi-footer">of all log lines are warnings</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">LG — KPI Anomalies</div>
+          <div class="kpi-number mono" id="kpi-anomalies">200</div>
+          <div class="kpi-footer">Anomalies Flagged</div>
+        </div>
+      </div>
+
+      <!-- SECTION 1: WHERE THE RISK IS -->
+      <div class="section-divider">
+        <h2 class="section-heading">Where the risk is</h2>
+      </div>
+
+      <div class="charts-grid-2x2">
+        <!-- 1. Service Risk Leaderboard -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Service risk leader board</span>
+            <button class="chart-why-btn" onclick="openWhyModal('oslo_service.periodic_task', 'service_health')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> RISK_SCORE: All · 10+</span>
+          </div>
+          <div class="canvas-container" style="height: 230px;">
+            <canvas id="chart-risk-leaderboard"></canvas>
+          </div>
+        </div>
+
+        <!-- 2. Log Level Distribution -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Log level distribution</span>
+            <button class="chart-why-btn" onclick="openWhyModal('Estate_LogLevel', 'chart_metric')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> SUM(log_lines): All · 10+</span>
+          </div>
+          <div class="canvas-container" style="height: 230px;">
+            <canvas id="chart-log-level"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Warnings by Service -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Warnings by service</span>
+            <button class="chart-why-btn" onclick="openWhyModal('nova.virt.libvirt.imagecache', 'service_health')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> SUM(warning_count): All · 10+</span>
+          </div>
+          <div class="canvas-container" style="height: 230px;">
+            <canvas id="chart-warnings-service"></canvas>
+          </div>
+        </div>
+
+        <!-- 4. HTTP Status Mix -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — HTTP status mix</span>
+            <button class="chart-why-btn" onclick="openWhyModal('HTTP_Status_Mix', 'chart_metric')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> 2xx success</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#6366F1;"></span> 4xx client error</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#A855F7;"></span> 5xx server error</span>
+          </div>
+          <div class="canvas-container" style="height: 230px;">
+            <canvas id="chart-http-mix"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: HOW IT BEHAVES OVER TIME -->
+      <div class="section-divider">
+        <h2 class="section-heading">How it behaves over time</h2>
+      </div>
+
+      <!-- Log Volume Over Time (Full Width Area Chart) -->
+      <div class="chart-panel full-width">
+        <div class="chart-header">
+          <span class="chart-title">LG — Log volume over time</span>
+          <button class="chart-why-btn" onclick="openWhyModal('Log_Volume_Trend', 'chart_metric')">
+            <span>✨ Why?</span>
+          </button>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> SUM(log_lines): All · 10+</span>
+        </div>
+        <div class="canvas-container" style="height: 220px;">
+          <canvas id="chart-volume-trend"></canvas>
+        </div>
+      </div>
+
+      <div class="charts-grid-2col" style="margin-top: 1.25rem;">
+        <!-- Severity Over Time -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Severity over time</span>
+            <button class="chart-why-btn" onclick="openWhyModal('Severity_Trend', 'chart_metric')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> SUM(warning)</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#F59E0B;"></span> SUM(error)</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#10B981;"></span> SUM(critical)</span>
+          </div>
+          <div class="canvas-container" style="height: 220px;">
+            <canvas id="chart-severity-trend"></canvas>
+          </div>
+        </div>
+
+        <!-- Latency Over Time -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Latency over time</span>
+            <button class="chart-why-btn" onclick="openWhyModal('Latency_Trend', 'chart_metric')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#38BDF8;"></span> P95(p95_response_time)</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> AVG(avg_response_time)</span>
+          </div>
+          <div class="canvas-container" style="height: 220px;">
+            <canvas id="chart-latency-trend"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid-2col" style="margin-top: 1.25rem;">
+        <!-- Latency by Service (HTTP only) -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Latency by service (HTTP only)</span>
+            <button class="chart-why-btn" onclick="openWhyModal('nova.osapi_compute.wsgi.server', 'service_health')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> MAX(p95_response_time)</span>
+            <span class="legend-chip"><span class="legend-color" style="background:#6366F1;"></span> MAX(avg_response_time)</span>
+          </div>
+          <div class="canvas-container" style="height: 220px;">
+            <canvas id="chart-service-latency"></canvas>
+          </div>
+        </div>
+
+        <!-- Ingestion by Kafka Topic -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">LG — Ingestion by Kafka topic</span>
+            <button class="chart-why-btn" onclick="openWhyModal('Kafka_Topics', 'chart_metric')">
+              <span>✨ Why?</span>
+            </button>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-chip"><span class="legend-color" style="background:#0284C7;"></span> SUM(log_lines): All · 10+</span>
+          </div>
+          <div class="canvas-container" style="height: 220px;">
+            <canvas id="chart-kafka-topics"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE ANOMALY FEED -->
+      <div class="section-divider" style="margin-top: 2rem;">
+        <h2 class="section-heading">Live Anomaly Feed</h2>
+      </div>
+      <div class="anomaly-feed-panel" id="anomaly-feed-panel">
+        <div class="anomaly-feed-header">
+          <span class="mono" style="font-size:0.72rem; color:var(--text-faint);">GOLD.ML_FEATURE_DATASET · Real-time anomaly events</span>
+          <span class="status-chip live" style="font-size:0.65rem;"><span class="pulse-dot"></span> LIVE FEED</span>
+        </div>
+        <div class="anomaly-feed-list" id="anomaly-feed-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- SECTION 3: SERVICE DETAIL TABLE -->
+      <div class="section-divider" style="margin-top: 2rem;">
+        <h2 class="section-heading">Service detail</h2>
+      </div>
+
+      <div class="table-panel">
+        <div class="table-title">LG — Service detail</div>
+        <div class="table-responsive">
+          <table class="superset-table">
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>log_lines</th>
+                <th>http_requests</th>
+                <th>latency_samples</th>
+                <th>error_count</th>
+                <th>error_rate</th>
+                <th>warning_count</th>
+                <th>warning_rate</th>
+                <th>anomaly_count</th>
+                <th>risk_score</th>
+                <th>health_status</th>
+                <th>latency_coverage</th>
+                <th>AI Insight</th>
+              </tr>
+            </thead>
+            <tbody id="superset-service-table-body">
+              <!-- Dynamically populated from backend data provider -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: ML ANOMALIES & MODEL GOVERNANCE CARDS                          -->
+    <!-- ===================================================================== -->
+    <section id="tab-ml" class="tab-page">
+
+      <!-- 1. ML SUMMARY BAR -->
+      <div class="kpi-row ml-summary-bar" id="ml-summary-bar">
+        <div class="kpi-card">
+          <div class="kpi-header">Models Available</div>
+          <div class="kpi-number mono" id="ml-kpi-available">0</div>
+          <div class="kpi-footer">Registered models</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">Production Candidates</div>
+          <div class="kpi-number mono" id="ml-kpi-prod-candidates" style="color:var(--c-green);">0</div>
+          <div class="kpi-footer">Healthy / Production ready</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">Demo / Experimental</div>
+          <div class="kpi-number mono" id="ml-kpi-demo-experimental" style="color:var(--c-amber);">0</div>
+          <div class="kpi-footer">Rule validation / Experimental</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">Total Anomalies</div>
+          <div class="kpi-number mono" id="ml-kpi-total-anomalies" style="color:var(--c-cyan);">0</div>
+          <div class="kpi-footer">In current dataset window</div>
+        </div>
+      </div>
+
+      <!-- 2. INTERACTIVE MODEL MONITORING CONSOLE -->
+      <div class="section-divider" style="margin-top: 1.5rem;">
+        <h2 class="section-heading">Interactive Model Inspection & Evaluation</h2>
+      </div>
+
+      <div class="charts-grid-2col" style="margin-bottom: 1.5rem;">
+        <!-- Left Column: Model Selector & Selected Model Detail Panel -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">Model Selector & Metadata</span>
+            <span class="chip-status healthy" id="ml-detail-status-badge">Production Candidate</span>
+          </div>
+
+          <div class="form-item" style="margin-top: 0.5rem; margin-bottom: 0.75rem;">
+            <label class="form-label mono" for="ml-model-select">SELECT MODEL</label>
+            <select id="ml-model-select" class="form-control mono">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div id="ml-selected-model-panel" class="ml-selected-panel">
+            <h3 id="ml-detail-title" class="ml-card-title" style="margin-bottom: 0.25rem;">--</h3>
+            <div id="ml-detail-notebook" class="ml-card-eyebrow" style="margin-bottom: 0.75rem;">--</div>
+
+            <p style="font-size:0.8rem; color:#94A3B8; margin-bottom:0.4rem;">
+              <strong>Objective:</strong> <span id="ml-detail-objective">--</span>
+            </p>
+            <p style="font-size:0.75rem; color:#64748B; margin-bottom:0.75rem;">
+              <strong>Algorithm:</strong> <code id="ml-detail-algorithm">--</code>
+            </p>
+
+            <div class="ml-limitations" id="ml-detail-limitations-box">
+              <strong>Governance Disclosure:</strong> <span id="ml-detail-limitations">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Metrics & Comparison Visualization -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">Model Performance & Comparison</span>
+          </div>
+
+          <div class="form-item" style="margin-top: 0.5rem; margin-bottom: 0.75rem;">
+            <label class="form-label mono">EVALUATION METRIC COMPARISON</label>
+            <div class="metric-tabs-group" id="ml-metric-tabs">
+              <!-- Metric buttons dynamically rendered based on available metrics in API -->
+            </div>
+          </div>
+
+          <div class="canvas-container" style="height: 200px; margin-top: 0.5rem;">
+            <canvas id="chart-ml-metric-comparison"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. ML MODEL CARDS & GOVERNANCE -->
+      <div class="section-divider">
+        <h2 class="section-heading">ML Model Registry Cards</h2>
+      </div>
+      <div class="model-cards-container" id="ml-model-cards-container" style="margin-bottom: 1.5rem;">
+        <!-- Dynamically populated with expand/collapse cards -->
+      </div>
+
+      <!-- 4. GROUND TRUTH JOINED ANOMALIES -->
+      <div class="section-divider">
+        <h2 class="section-heading">Ground Truth Joined Anomalies</h2>
+      </div>
+
+      <div class="table-panel" style="margin-bottom: 1.5rem;">
+        <div class="table-title">GOLD.ML_FEATURE_DATASET · Anomaly Explorer</div>
+
+        <!-- Anomaly Summary Stats -->
+        <div class="anomaly-summary-bar" id="ml-anomaly-summary-bar">
+          <div class="anomaly-stat-chip">
+            <span class="stat-label">Total Occurrences:</span>
+            <span class="stat-value mono" id="ml-summary-total-occurrences">0</span>
+          </div>
+          <div class="anomaly-stat-chip">
+            <span class="stat-label">Affected Services:</span>
+            <span class="stat-value mono" id="ml-summary-affected-services">0</span>
+          </div>
+          <div class="anomaly-stat-chip">
+            <span class="stat-label">Highest Anomaly Service:</span>
+            <span class="stat-value mono" id="ml-summary-highest-service">--</span>
+          </div>
+        </div>
+
+        <!-- Anomaly Filter Controls -->
+        <div class="anomaly-filter-bar">
+          <div class="filter-item search-item">
+            <label class="filter-label mono" for="ml-search-service">SEARCH SERVICE</label>
+            <input type="text" id="ml-search-service" class="form-control mono" placeholder="Filter by service name...">
+          </div>
+
+          <div class="filter-item">
+            <label class="filter-label mono" for="ml-filter-loglevel">LOG LEVEL</label>
+            <select id="ml-filter-loglevel" class="form-control mono">
+              <option value="">All Log Levels</option>
+            </select>
+          </div>
+
+          <div class="filter-item" id="ml-filter-category-container">
+            <label class="filter-label mono" for="ml-filter-category">RESPONSE CATEGORY</label>
+            <select id="ml-filter-category" class="form-control mono">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+
+          <div class="filter-action-item">
+            <button id="ml-btn-clear-filters" class="btn-clear-filters">Clear Filters</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="superset-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Log Level</th>
+                <th>Response Category</th>
+                <th>Status Code</th>
+                <th>Anomaly Count</th>
+                <th>Signature Pattern</th>
+                <th>AI Diagnosis</th>
+              </tr>
+            </thead>
+            <tbody id="ml-anomalies-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: AI "WHY?" EXPLORER                                             -->
+    <!-- ===================================================================== -->
+    <section id="tab-ai-explorer" class="tab-page">
+      <div class="section-divider">
+        <h2 class="section-heading">Interactive AI "Why?" Explorer</h2>
+      </div>
+
+      <div class="charts-grid-2col">
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">Configure Telemetry Inspection</span>
+          </div>
+          
+          <div class="form-item">
+            <label class="form-label mono">SELECT SERVICE OR COMPONENT</label>
+            <select id="ai-explorer-service-select" class="form-control mono">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="form-item">
+            <label class="form-label mono">EXPLANATION MODE</label>
+            <div class="radio-pill-group">
+              <label class="radio-pill"><input type="radio" name="exp-mode" value="service_health" checked> <span>Service Health</span></label>
+              <label class="radio-pill"><input type="radio" name="exp-mode" value="anomaly"> <span>Anomaly Pattern</span></label>
+              <label class="radio-pill"><input type="radio" name="exp-mode" value="chart_metric"> <span>Estate Summary</span></label>
+            </div>
+          </div>
+
+          <button class="btn-run-ai" id="btn-run-ai-explorer">
+            <span>✨ Run AI "Why?" Diagnosis</span>
+          </button>
+        </div>
+
+        <div class="chart-panel">
+          <div class="chart-header">
+            <span class="chart-title">Grounded AI Diagnostic Report</span>
+            <span class="status-chip ai" id="ai-explorer-status-badge">Ready</span>
+          </div>
+          <div id="ai-explorer-result-body" class="ai-report-box">
+            <p class="empty-prompt">Select a service on the left and run the diagnosis to generate a strict, data-grounded explanation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- "WHY?" POPUP / MODAL (4-PART GROUNDED EXPLANATION)                    -->
+  <!-- ===================================================================== -->
+  <div id="why-modal" class="modal-backdrop hidden">
+    <div class="modal-dialog">
+      
+      <div class="modal-dialog-header">
+        <div class="modal-header-meta">
+          <div class="modal-badges">
+            <span class="badge-item blue" id="modal-badge-service">nova.compute.manager</span>
+            <span class="badge-item" id="modal-badge-health">Healthy</span>
+            <span class="badge-item purple" id="modal-badge-model">Gemini 2.5 Flash</span>
+          </div>
+          <h3 class="modal-heading serif" id="modal-heading-text">Service Health Diagnostic Report</h3>
+        </div>
+        <button class="modal-btn-close" id="modal-btn-close">✕</button>
+      </div>
+
+      <div class="modal-dialog-body">
+        
+        <!-- Loading State -->
+        <div class="modal-loader-box" id="modal-loader-box">
+          <div class="ai-spinner"></div>
+          <div class="loader-caption mono">Querying Gemini AI & evaluating Gold telemetry facts...</div>
+        </div>
+
+        <!-- 4-Part Structured AI Output -->
+        <div class="modal-content-grid hidden" id="modal-content-grid">
+          
+          <div class="modal-section-card">
+            <div class="modal-section-title"><span class="num-badge">1</span> What Happened?</div>
+            <div class="modal-section-body serif" id="modal-section-what"></div>
+          </div>
+
+          <div class="modal-section-card">
+            <div class="modal-section-title"><span class="num-badge">2</span> Why Did This Happen?</div>
+            <div class="modal-section-body serif" id="modal-section-why"></div>
+          </div>
+
+          <div class="modal-section-card">
+            <div class="modal-section-title"><span class="num-badge">3</span> Potential Operational Impact</div>
+            <div class="modal-section-body serif" id="modal-section-impact"></div>
+          </div>
+
+          <div class="modal-section-card highlight-action">
+            <div class="modal-section-title"><span class="num-badge">4</span> What Should Be Checked Next?</div>
+            <ul class="modal-section-list serif" id="modal-section-next"></ul>
+          </div>
+
+          <!-- Collapsible Grounded Evidence JSON -->
+          <div class="grounding-drawer">
+            <details>
+              <summary class="mono">🔍 View Evaluated Gold Facts (Grounding JSON)</summary>
+              <pre class="grounding-code mono" id="modal-grounding-json"></pre>
+            </details>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-dialog-footer">
+        <div class="grounding-tagline">
+          🔒 <strong>Grounded AI:</strong> Derived strictly from verified Gold tables. No speculative hallucination.
+        </div>
+        <button class="btn-copy-diag" id="btn-copy-diag">📋 Copy Diagnosis</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
