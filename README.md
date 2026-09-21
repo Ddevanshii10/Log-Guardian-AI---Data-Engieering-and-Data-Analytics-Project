@@ -362,7 +362,7 @@ Use environment variables for credentials and secrets.
 | Databricks SQL connection | Working        |
 | Backend dashboard API     | Implemented    |
 | Frontend dashboard        | Implemented    |
-| AI intelligence layer     | In development |
+| AI intelligence layer     | Completed      |
 | Early-warning prediction  | Experimental   |
 
 ---
