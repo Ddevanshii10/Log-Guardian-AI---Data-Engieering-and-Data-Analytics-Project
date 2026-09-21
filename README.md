@@ -23,6 +23,16 @@ flowchart TD
     H --> I
     I --> J[Apache Superset / Web Dashboard]
 ```
+## 🧰 Tech Stack
+
+| Category | Technologies & Tools |
+| :--- | :--- |
+| **Ingestion & Streaming** | Apache Kafka, Aiven Kafka, Python Kafka Producers |
+| **Data Processing & Lakehouse** | Apache Spark, Databricks, Delta Lake (Medallion Architecture) |
+| **Machine Learning & AI** | Spark ML (Binary Anomaly Detection, Multi-class Health Classification), MLflow |
+| **Data Serving & Analytics** | Databricks SQL Engine, Python REST APIs |
+| **Visualization & UI** | Apache Superset, HTML5/CSS3, JavaScript |
+| **Environment & Tooling** | Docker, Git, VS Code, Python 3.10+ |
 
 ---
 
